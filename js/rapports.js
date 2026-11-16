@@ -11,11 +11,11 @@ async function build() {
     if (mois) { const [y, m] = $('#pm').value.split('-').map(Number); d1 = `${y}-${pad(m)}-01`; d2 = iso(new Date(y, m, 0)); titre = `Rapport de ${MOIS[m - 1]} ${y}`; }
     else { const y = $('#py').value; d1 = `${y}-01-01`; d2 = `${y}-12-31`; titre = `Rapport annuel ${y}`; }
     const inR = d => d && d >= d1 && d <= d2;
-    const [mem, reu, pres, vis, bap, evt, cel] = await Promise.all([
+    const [mem, reu, pres, vis, bap, evt, cel, cai] = await Promise.all([
       fetchAll(() => sb.from('membres').select('*').order('id')), fetchAll(() => sb.from('reunions').select('*').gte('date', d1).lte('date', d2).order('date').order('id')),
       fetchAll(() => sb.from('presences').select('reunion_id,statut').order('id')), fetchAll(() => sb.from('visites').select('*').gte('date_visite', d1).lte('date_visite', d2).order('id')),
       fetchAll(() => sb.from('baptemes').select('*').order('id')), fetchAll(() => sb.from('evenements').select('*').gte('date', d1).lte('date', d2).order('date').order('id')),
-      fetchAll(() => sb.from('cellules').select('*').order('nom'))]);
+      fetchAll(() => sb.from('cellules').select('*').order('nom')), loadCaisse(null, d2)]);
     const actifs = mem.filter(m => !m.archive), cnt = {};
     const rid = new Set(reu.map(r => r.id)); pres.filter(p => rid.has(p.reunion_id)).forEach(p => { (cnt[p.reunion_id] ||= { present: 0, absent: 0, excuse: 0 })[p.statut]++; });
     const g = id => cnt[id] || { present: 0, absent: 0, excuse: 0 };
@@ -35,6 +35,28 @@ async function build() {
       + sec('Candidats au baptême', `<p>Sélectionnés : ${bapP.length} · validés : ${bapP.filter(b => b.statut === 'valide').length} · ajournés : ${bapP.filter(b => b.statut === 'ajourne').length} · baptisés : ${bapP.filter(b => b.statut === 'baptise').length}</p>` + table(['Candidat', 'Statut', 'Date prévue'], bapP.map(b => [esc(nomDe(b.membre_id)), b.statut, fmtDate(b.date_prevue)]), 'Aucun candidat sur la période.'))
       + sec('Membres baptisés', table(['Nom et prénoms', 'Date', 'Responsable', 'Lieu'], baptises.map(m => { const b = bap.find(x => x.membre_id === m.id) || {}; return [esc(m.nom_prenoms), fmtDate(m.date_bapteme), esc(b.responsable || '—'), esc(b.lieu || '—')]; }), 'Aucun baptême sur la période.'))
       + sec('Nouveaux convertis', table(['Nom et prénoms', 'Intégré le', 'Téléphone'], convertis.map(m => [esc(m.nom_prenoms), fmtDate(m.date_integration), esc(m.telephone || '—')]), 'Aucun nouveau converti sur la période.'))
-      + sec('Événements et programmes', table(['Date', 'Événement', 'Type', 'Lieu', 'Participants'], evt.map(e => [fmtDate(e.date), esc(e.titre), esc(e.type || ''), esc(e.lieu || ''), e.participants ?? '—']), 'Aucun événement sur la période.'));
+      + sec('Événements et programmes', table(['Date', 'Événement', 'Type', 'Lieu', 'Participants'], evt.map(e => [fmtDate(e.date), esc(e.titre), esc(e.type || ''), esc(e.lieu || ''), e.participants ?? '—']), 'Aucun événement sur la période.'))
+      + sectionCaisse(cai, d1, mois);
   });
+}
+
+/* Caisse : section réservée aux responsables (cai = null pour un serviteur ou si la caisse n'est pas installée).
+   cai contient tous les mouvements jusqu'à la fin de la période : le solde de fin de période en découle. */
+function sectionCaisse(cai, d1, mois) {
+  if (!cai) return '';
+  const per = cai.filter(x => x.date >= d1);
+  const ent = caisseTotal(per, 'entree'), sor = caisseTotal(per, 'sortie'), fin = r2(caisseTotal(cai, 'entree') - caisseTotal(cai, 'sortie'));
+  const stat = (l, v, c = '') => `<div class="stat ${c}"><b>${moneyHtml(v)}</b><span>${l}</span></div>`;
+  const g = {};
+  per.forEach(x => { const o = g[x.sens + '|' + x.categorie] ||= { sens: x.sens, cat: x.categorie, n: 0, t: 0 }; o.n++; o.t += Number(x.montant); });
+  const cats = Object.values(g).sort((a, b) => a.sens.localeCompare(b.sens) || b.t - a.t);
+  const detail = mois
+    ? table(['Date', 'Type', 'Catégorie', 'Occasion et détail', 'Montant'], per.map(x => [fmtDate(x.date), sensBadge(x.sens), esc(x.categorie),
+        [x.occasion && `<b>${esc(x.occasion)}</b>`, x.libelle && `<small>${esc(x.libelle)}</small>`].filter(Boolean).join('<br>'),
+        `<b style="color:var(--${x.sens === 'entree' ? 'ok' : 'bad'})">${x.sens === 'entree' ? '+' : '−'}&nbsp;${money(Number(x.montant))}</b>`]), 'Aucun mouvement ce mois-ci.')
+    : table(['Mois', 'Entrées', 'Sorties', 'Solde'], MOIS.map((nom, i) => { const r = per.filter(x => +x.date.slice(5, 7) === i + 1); if (!r.length) return null;
+        const e = caisseTotal(r, 'entree'), s = caisseTotal(r, 'sortie'); return [nom[0].toUpperCase() + nom.slice(1), money(e), money(s), `<b>${money(r2(e - s))}</b>`]; }).filter(Boolean), 'Aucun mouvement sur l\'année.');
+  return `<div class="panel sect"><h3>Caisse</h3><div class="grid">${stat('Entrées de la période', ent, 'ok')}${stat('Sorties de la période', sor, 'b')}${stat('Solde de la période', r2(ent - sor), ent < sor ? 'b' : 'g')}${stat('Solde en caisse en fin de période', fin)}</div>`
+    + `<h4 style="margin:6px 0 8px">Par catégorie</h4>` + table(['Type', 'Catégorie', 'Nombre', 'Total'], cats.map(o => [sensBadge(o.sens), esc(o.cat), o.n, `<b>${money(r2(o.t))}</b>`]), 'Aucun mouvement sur la période.')
+    + `<h4 style="margin:18px 0 8px">${mois ? 'Détail des mouvements' : 'Mois par mois'}</h4>` + detail + '</div>';
 }

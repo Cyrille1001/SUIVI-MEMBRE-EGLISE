@@ -1,5 +1,6 @@
 boot('dashboard', 'Tableau de bord', async () => {
   const P = await getParam();
+  const caiP = loadCaisse();                    // totaux de caisse : responsables seulement, lancé en parallèle
   const [membres, pres, vis, cel, reu, bap] = await Promise.all([
     fetchAll(() => sb.from('membres').select('*').eq('archive', false).order('id')),
     fetchAll(() => sb.from('presences').select('membre_id,statut,reunion_id,reunions(date,type)').order('id')),
@@ -34,6 +35,13 @@ boot('dashboard', 'Tableau de bord', async () => {
   $('#cards').innerHTML = card('Membres enregistrés', membres.length, 'users', 'pri') + card('Nouveaux membres (30 jours)', nouveaux, 'userplus', 'gold') + card(`Membres actifs (${P.jours_actif} jours)`, actifs, 'pulse', 'ok')
     + card('Membres baptisés', baptises, 'drop', 'sky') + card('En attente de baptême', attente, 'clock', 'warn') + card('Personnes visitées', visites.size, 'pin', 'pri')
     + card(dernier ? `Absents au dernier culte (${fmtDate(dernier.date)})` : 'Absents au dernier culte', absents, 'userx', 'bad') + card('Absents à la dernière cellule', absCel.size, 'userx', 'warn') + card('Anniversaires du mois', anniv.length, 'gift', 'ok');
+
+  /* Solde en caisse (visible des responsables ; un clic ouvre la page Caisse) */
+  const cai = await caiP;
+  if (cai) {
+    const sg = r2(caisseTotal(cai, 'entree') - caisseTotal(cai, 'sortie'));
+    $('#cards').insertAdjacentHTML('beforeend', `<a class="stat ic c-${sg < 0 ? 'bad' : 'gold'}" href="caisse.html"><span class="si">${ico('wallet')}</span><div><b class="m">${nf.format(sg)}</b><span>Solde en caisse (${esc(DEV)})</span></div></a>`);
+  }
 
   const cnt = {}; pres.forEach(p => { if (p.statut === 'present') cnt[p.reunion_id] = (cnt[p.reunion_id] || 0) + 1; });
   $('#chart').innerHTML = cultes.length ? bars(cultes.slice(-8).map(c => ({ label: fmtDate(c.date).slice(0, 5), value: cnt[c.id] || 0 }))) : '<p class="empty">Aucun culte enregistré pour le moment.</p>';

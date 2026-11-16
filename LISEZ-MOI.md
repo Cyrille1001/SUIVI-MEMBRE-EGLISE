@@ -8,7 +8,8 @@ et se recharge toute seule au retour de la connexion.
 
 ## Mise en route (une seule fois)
 1. Créer le projet Supabase du client (nouveau compte au nom du client).
-2. Supabase > SQL Editor : exécuter `sql/schema.sql`, puis `sql/02_roles.sql` (droits des rôles appliqués côté base).
+2. Supabase > SQL Editor : exécuter `sql/schema.sql`, puis `sql/02_roles.sql` (droits des rôles appliqués côté base), puis `sql/03_caisse.sql` (caisse).
+   Application déjà en service : exécuter seulement `sql/03_caisse.sql`.
 3. Authentication > Providers > Email : **désactiver « Confirm email »**.
 4. Project Settings > API : copier l'URL et la clé `anon` dans `js/config.js`.
 5. Authentication > Users > Add user : `admin@add-app.com` + mot de passe (« Auto confirm user » coché).
@@ -22,7 +23,7 @@ et se recharge toute seule au retour de la connexion.
 - `index.html` : connexion (seul fichier à la racine avec les dossiers)
 - `pages/` : une page entière par entrée du menu (tableau de bord, membres, fiche membre, cultes et cellules,
   synthèse, statistiques, cellules, visites, à visiter, candidats, suivi des baptêmes, baptisés,
-  anniversaires, événements, rapports, paramètres, utilisateurs)
+  anniversaires, événements, rapports, caisse, paramètres, utilisateurs)
 - `js/vendor/` : bibliothèque Supabase (ne pas modifier)
 - `js/common.js` : socle partagé (client Supabase, icônes, menu, transitions, calculs de présence)
 - `js/<page>.js` : le code de chaque page · `css/style.css` : design · `sql/schema.sql` : base de données
@@ -36,3 +37,11 @@ et se recharge toute seule au retour de la connexion.
 
 ## Droits
 - « Importer des membres » : réservé à l'administrateur. « Utilisateurs » : administrateur seulement.
+- « Caisse » : réservée aux responsables et à l'administrateur (les serviteurs ne la voient pas). Suppression d'une ligne : administrateur seulement.
+
+## Caisse (quêtes, offrandes, dépenses)
+- Aucun paiement en ligne : l'argent est encaissé physiquement, on saisit seulement le montant (date, catégorie, occasion, montant, note).
+- Totaux de la période (mois, mois précédent, année, depuis le début), solde général, répartition par catégorie, export Excel (CSV) et impression.
+- Chaque ligne garde le nom de la personne qui l'a saisie (et de celle qui l'a modifiée).
+- Catégories et occasions : listes `CAT` et `OCCASIONS` en haut de `js/caisse.js`. Devise : ligne `devise` de la table `parametres` (FCFA par défaut).
+- Le solde en caisse apparaît aussi sur le tableau de bord, et une section « Caisse » figure dans les rapports mensuel et annuel, pour les responsables et l'administrateur seulement. Si `sql/03_caisse.sql` n'est pas installé, ces deux pages restent comme avant.

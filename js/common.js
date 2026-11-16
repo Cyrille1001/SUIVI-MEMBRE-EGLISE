@@ -97,7 +97,8 @@ const ICONS = {
   image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/>',
   upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',
   download: '<path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>',
-  x: '<path d="M6 6l12 12M18 6L6 18"/>'
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  wallet: '<path d="M4 7a2 2 0 012-2h11v3"/><rect x="3" y="7" width="18" height="13" rx="2.5"/><circle cx="16.5" cy="13.5" r="1.2"/>'
 };
 const ico = (n, s = 18) => `<svg class="ico" width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
 
@@ -209,6 +210,26 @@ const isAdmin = () => ME?.role === 'admin';
 const isResp = () => ['admin', 'responsable'].includes(ME?.role);
 async function logout() { localStorage.removeItem('add_me'); try { await sb.auth.signOut({ scope: 'local' }); } catch (e) {} location.href = '../index.html'; }
 
+/* Caisse : outils partagés (page Caisse, tableau de bord, rapports) */
+const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+let DEV = 'FCFA';
+const money = n => nf.format(n) + '\u00a0' + DEV;
+const moneyHtml = n => `${nf.format(n)}<small> ${esc(DEV)}</small>`;
+const r2 = n => Math.round(n * 100) / 100;
+const caisseTotal = (rows, sens) => r2(rows.filter(x => x.sens === sens).reduce((t, x) => t + Number(x.montant), 0));
+const sensBadge = s => s === 'entree' ? badge('Entrée', 'ok') : badge('Sortie', 'b');
+/* Lignes de la caisse jusqu'à d2 (toutes si omis). Renvoie null pour un serviteur ou si 03_caisse.sql n'est pas installé :
+   les pages qui affichent la caisse restent alors identiques à avant. Fixe aussi la devise (DEV). */
+async function loadCaisse(d1, d2) {
+  if (!isResp()) return null;
+  try {
+    const rows = await fetchAll(() => { let q = sb.from('caisse').select('*'); if (d1) q = q.gte('date', d1); if (d2) q = q.lte('date', d2); return q.order('date').order('id'); });
+    const { data } = await sb.from('parametres').select('valeur').eq('cle', 'devise').maybeSingle();
+    if (data?.valeur) DEV = data.valeur;
+    return rows;
+  } catch (e) { console.warn('Caisse indisponible', e); return null; }
+}
+
 /* Menu latéral groupé : chaque entrée est une page entière (4e valeur = réservé à l'administrateur) */
 const MENU = [
   ['Général', [['dashboard', 'Tableau de bord', 'home']]],
@@ -217,6 +238,7 @@ const MENU = [
   ['Suivi pastoral', [['a-visiter', 'À visiter', 'bell'], ['visites', 'Visites', 'pin']]],
   ['Baptême', [['candidats-bapteme', 'Candidats', 'drop'], ['suivi-bapteme', 'Suivi et décisions', 'clock'], ['baptises', 'Personnes baptisées', 'award']]],
   ['Église', [['evenements', 'Événements', 'calendar'], ['rapports', 'Rapports', 'file']]],
+  ['Finances', [['caisse', 'Caisse', 'wallet', 'resp']]],
   ['Administration', [['parametres', 'Paramètres', 'sliders'], ['utilisateurs', 'Utilisateurs', 'userplus', 'admin']]]
 ];
 const ROLES = { admin: 'Administrateur', responsable: 'Responsable', serviteur: 'Serviteur' };
@@ -225,7 +247,7 @@ const SUBS = {
   'Cultes et cellules': 'Créez un culte ou une cellule, pointez les présences, cliquez sur une date pour le détail', 'Synthèse par membre': 'Présences et absences de chacun, cultes et cellules séparés', 'Statistiques de participation': 'Effectifs et taux de présence',
   'Cellules': 'Les groupes de maison et leurs responsables', 'Visites': 'Historique des visites effectuées', 'Membres à visiter': 'Membres absents à visiter et visites planifiées',
   'Candidats au baptême': 'Membres réguliers prêts à être proposés', 'Suivi des baptêmes': 'Décisions après validation pastorale', 'Personnes baptisées': 'Registre des baptêmes',
-  'Anniversaires': 'Par mois ou par semaine', 'Événements et programmes': 'Calendrier et comptes rendus', 'Rapports et statistiques': 'Bilans mensuels et annuels', 'Paramètres': 'Votre compte et les règles de suivi', 'Utilisateurs': 'Comptes et droits d\'accès', 'Importer des membres': 'Reprendre une liste existante (fichier CSV Excel)'
+  'Anniversaires': 'Par mois ou par semaine', 'Événements et programmes': 'Calendrier et comptes rendus', 'Caisse': "Quêtes, offrandes et dépenses de l'église", 'Rapports et statistiques': 'Bilans mensuels et annuels', 'Paramètres': 'Votre compte et les règles de suivi', 'Utilisateurs': 'Comptes et droits d\'accès', 'Importer des membres': 'Reprendre une liste existante (fichier CSV Excel)'
 };
 
 /* Installation : bouton « Installer l'application » (Android, ordinateur) ou mode d'emploi (iPhone) */
