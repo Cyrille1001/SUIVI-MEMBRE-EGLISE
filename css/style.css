@@ -7,6 +7,7 @@
 html{scroll-behavior:smooth}
 body{margin:0;font:15px/1.55 var(--sans);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
 h1,h2,h3{margin:0;font-family:var(--serif);font-weight:700;letter-spacing:-.01em}
+[hidden]{display:none!important}
 a{color:var(--pri2);text-decoration:none;transition:color .2s}a:hover{color:var(--pri)}
 .ico{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:-3px}
 .btn .ico{margin-right:6px}
@@ -28,6 +29,7 @@ a{color:var(--pri2);text-decoration:none;transition:color .2s}a:hover{color:var(
 .side nav a:hover{background:#ffffff14;color:#fff;transform:translateX(4px)}
 .side nav a.on{background:#ffffff22;color:#fff;font-weight:600}
 .side nav a.on{box-shadow:inset 0 0 0 1px #ffffff1f}.side nav a.on::before{content:"";position:absolute;left:-14px;top:11px;bottom:11px;width:5px;border-radius:0 5px 5px 0;background:var(--gold);animation:fade .4s}
+.inst{padding:0 14px 10px;position:relative}.inst .btn{width:100%;background:var(--gold);color:#3a2f00}.inst .btn:hover{background:#e0bf2c;color:#3a2f00;box-shadow:0 8px 20px #0004}
 .usr{padding:12px 14px;margin:0 12px 12px;border-radius:20px;box-shadow:inset 0 0 0 1px #ffffff14;background:#ffffff14;display:flex;align-items:center;gap:10px;position:relative}
 .usr>div{flex:1;min-width:0}.usr b{display:block;color:#fff;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.usr small{color:#9fd0cc}
 .usr button{background:#ffffff1f;color:#fff;border:0;border-radius:10px;width:36px;height:36px;cursor:pointer;display:grid;place-items:center;transition:background .2s}.usr button:hover{background:var(--bad)}
@@ -129,13 +131,13 @@ td .btn{margin:2px 4px 2px 0}
 @media(max-width:900px){.login{display:block;position:relative}.login-photo{position:fixed;inset:0;padding:0}.login-photo>div,.login-photo::after{display:none}.login-form{position:relative;z-index:1;min-height:100vh;background:transparent}}
 
 @media(max-width:960px){
- .side{transform:translateX(calc(-100% - 24px));width:min(290px,86vw)}body.menu .side{transform:none}
+ .side{transform:translateX(calc(-100% - 24px));width:min(290px,86vw);box-shadow:none}body.menu .side{transform:none;box-shadow:inset 0 0 0 1px #ffffff1a,0 22px 50px #03302f88}
  body.menu .scrim{display:block;position:fixed;inset:0;background:#031f1e88;z-index:55;animation:fade .25s}
  .main{margin-left:0}.burger{display:grid}.top{padding:12px 16px}.top .date,.ttl p{display:none}.content{padding:16px 14px 40px}
  .two,.fg{grid-template-columns:1fr}.prow{grid-template-columns:1fr}.overlay{padding:0}.modal,.modal.wide{max-width:none;min-height:100vh;border-radius:0}
  .grid{grid-template-columns:repeat(2,1fr);gap:12px}.hero{padding:22px 20px}.hero h2{font-size:25px}.stat.ic{flex-direction:column;align-items:flex-start;gap:10px}
 }
-@media(max-width:420px){.grid{grid-template-columns:1fr}.stat.ic{flex-direction:row;align-items:center}}
+@media(max-width:420px){.stat.ic{padding:12px}.si{width:42px;height:42px;border-radius:13px}.si .ico{width:21px;height:21px}.stat b{font-size:24px}.stat span{font-size:12px;line-height:1.3}.grid{gap:10px}.hero h2{font-size:23px}}
 body.offline{padding-top:40px;--nb:40px}
 #netbar{position:fixed;top:0;left:0;right:0;height:40px;background:#8a2d12;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font-size:14px;font-weight:600;z-index:350;transform:translateY(-100%);transition:transform .35s var(--ease);padding:0 12px;text-align:center}
 body.offline #netbar{transform:none}
@@ -147,5 +149,19 @@ body.offline #netbar{transform:none}
 .dcol h4{margin:0 0 6px;font:700 16px var(--serif);display:flex;align-items:center;gap:8px}.dcol .list li{align-items:flex-start}.dcol .empty{padding:14px 8px}
 @media(max-width:960px){.cols3{grid-template-columns:1fr}.dcol{max-height:none}}
 @media(max-width:960px){.hero{min-height:0;background:linear-gradient(90deg,#032e2de0,#032e2dcc),url(../img/banniere.jpg) 70% 20%/cover;background-color:#032e2d}}
+/* Téléphone : les tableaux deviennent des fiches (plus de défilement latéral, tout est lisible) */
+@media(max-width:700px){
+ .bar>input{flex:1 1 100%}.bar>select{flex:1 1 calc(50% - 5px);min-width:0}.bar>.btn{flex:1 1 calc(50% - 5px)}
+ .tw{border:0;overflow:visible;border-radius:0}.tw table,.tw tbody{display:block;background:none}.tw thead{display:none}
+ .tw tr{display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:4px 14px;margin-bottom:10px;box-shadow:var(--sh)}.tw tr:last-child{margin-bottom:0}
+ .tw tbody tr:hover{background:#fff}
+ .tw td{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line);text-align:right}.tw td:last-child{border-bottom:0}
+ .tw td::before{content:attr(data-label);color:var(--mut);font-size:12px;font-weight:600;text-align:left;flex:none;max-width:42%}
+ .tw td:first-child{justify-content:flex-start;text-align:left;font-weight:600;font-size:15px;padding-top:12px}.tw td:first-child::before{display:none}
+ .tw td[data-label=""],.tw td[data-label="Actions"]{justify-content:flex-start;flex-wrap:wrap;gap:4px}.tw td[data-label=""]::before,.tw td[data-label="Actions"]::before{display:none}.tw td.vide{display:none}
+ .panel:has(.tw){background:transparent;border:0;box-shadow:none;padding:0}.hero .acts .btn{flex:1 1 100%}
+ .tw td .btn{margin:2px 4px 2px 0}.panel{padding:14px}.blk-t{font-size:18px}
+}
+@media(max-width:700px){.nb-long{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 @media print{.side,.top,.noprint,.scrim,.btn,#progress{display:none!important}.main{margin:0}.content{animation:none;padding:0}.panel,.stat{box-shadow:none;break-inside:avoid}body{background:#fff}}

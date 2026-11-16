@@ -1,0 +1,4 @@
+Bibliothèque : @supabase/supabase-js 2.118.0 (build navigateur, fichier unique)
+Publiée sur npm le 2026-10-15. Fichier identique à celui du paquet officiel (vérifié par comparaison).
+SHA-256 : ee3be8de192b97cb1d73d1e95d6b82bb1f6b658c0f97c4ef757fc331996ed3d3
+Ne pas modifier ce fichier. Pour changer de version, retélécharger le paquet officiel et mettre à jour cette note.

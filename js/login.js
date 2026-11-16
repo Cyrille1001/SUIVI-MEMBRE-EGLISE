@@ -16,3 +16,5 @@ $('#f').addEventListener('submit', async e => {
 });
 window.addEventListener('offline', () => $('#err').textContent = 'Pas de connexion Internet.');
 window.addEventListener('online', () => $('#err').textContent = '');
+
+showInstall();

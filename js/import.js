@@ -81,7 +81,7 @@ function buildRows(rows, cols, existing) {
 }
 
 boot('import', 'Importer des membres', async () => {
-  if (!isResp()) { location.href = 'dashboard.html'; return; }
+  if (!isAdmin()) { location.href = 'dashboard.html'; return; }
   $('#imp').innerHTML = `<div class="panel"><h3>Reprendre une liste existante</h3>
     <ol style="margin:0 0 14px;padding-left:20px;line-height:1.9">
       <li>Téléchargez le modèle et remplissez-le dans Excel (une ligne par membre, seule la colonne « nom_prenoms » est obligatoire).</li>

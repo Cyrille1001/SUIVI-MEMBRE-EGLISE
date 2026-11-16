@@ -5,7 +5,7 @@ if (typeof supabase === 'undefined') {
 }
 const CFG = window.ADD_CONFIG;
 /* Chaque requête réseau est limitée à 20 s : au-delà, on affiche un message clair au lieu de tourner indéfiniment */
-const sb = supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { global: { fetch: (url, opts = {}) => {
+const sb = supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { db: { retry: false }, global: { fetch: (url, opts = {}) => {
   const c = new AbortController(), t = setTimeout(() => c.abort(), 20000);
   if (opts.signal) opts.signal.addEventListener('abort', () => c.abort());
   return fetch(url, { ...opts, signal: c.signal }).finally(() => clearTimeout(t));
@@ -33,20 +33,26 @@ function downloadCSV(nom, entetes, lignes) {
   const txt = '\ufeff' + [entetes, ...lignes].map(r => r.map(q).join(';')).join('\r\n');
   downloadBlob(nom, new Blob([txt], { type: 'text/csv;charset=utf-8' }));
 }
-/* Photo : redressée, réduite (1600 px max) et compressée en JPEG ; refusée si elle dépasse 5 Mo */
+/* Photo : redressée, réduite (1600 px max) et compressée en JPEG ; refusée seulement si elle dépasse encore 5 Mo.
+   Le décodage passe par un élément <img> : c'est la méthode qui marche sur tous les téléphones et navigateurs. */
 const PHOTO_MAX = 5 * 1024 * 1024;
 async function preparePhoto(file, maxSide = 1600) {
-  if (!file.type.startsWith('image/')) throw new Error("Ce fichier n'est pas une image.");
+  if (file.type && !file.type.startsWith('image/')) throw new Error("Ce fichier n'est pas une image.");
   let blob = null;
   try {
-    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
-    const k = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
-    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); if (bmp.close) bmp.close();
-    for (const q of [.85, .7, .55]) { blob = await new Promise(r => c.toBlob(r, 'image/jpeg', q)); if (blob && blob.size <= PHOTO_MAX) break; }
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error('decode')); i.src = url; });
+      const k = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      for (const q of [.85, .7, .55, .4]) { blob = await new Promise(r => c.toBlob(r, 'image/jpeg', q)); if (blob && blob.size <= PHOTO_MAX) break; }
+    } finally { URL.revokeObjectURL(url); }
   } catch (e) { blob = null; }
-  if (!blob) blob = file;                       // format non décodable par le navigateur : on garde l'original
-  if (blob.size > PHOTO_MAX) throw new Error(`La photo dépasse 5 Mo (${(blob.size / 1048576).toFixed(1)} Mo).`);
+  if (!blob) blob = file;                       // décodage impossible : on garde l'original s'il est assez léger
+  if (blob.size > PHOTO_MAX) throw new Error(blob === file
+    ? "Impossible de réduire cette photo automatiquement. Reprenez-la ou choisissez-en une plus légère (5 Mo maximum)."
+    : `La photo dépasse encore 5 Mo (${(blob.size / 1048576).toFixed(1)} Mo).`);
   return blob;
 }
 function downloadBlob(nom, blob) {
@@ -57,7 +63,7 @@ const initials = n => String(n || '?').split(/\s+/).slice(0, 2).map(x => x[0]).j
 const avatar = (m, cls = '') => m.photo_url ? `<img class="av ${cls}" src="${esc(m.photo_url)}" alt="">` : `<span class="av ${cls}">${esc(initials(m.nom_prenoms))}</span>`;
 const lienMembre = m => `<a href="membre.html?id=${m.id}">${esc(m.nom_prenoms)}</a>`;
 const table = (h, rows, empty = 'Aucune donnée') => rows.length
-  ? `<div class="tw"><table><thead><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+  ? `<div class="tw"><table><thead><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td data-label="${esc(String(h[i] ?? '').replace(/<[^>]*>/g, ''))}"${String(c).trim() === '' ? ' class="vide"' : ''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
   : `<p class="empty">${empty}</p>`;
 const bars = items => { const mx = Math.max(1, ...items.map(i => i.value)); return `<div class="chart">${items.map((i, k) => `<div><b>${i.value}</b><i style="height:${Math.round(i.value / mx * 100)}%;animation-delay:${k * 60}ms"></i><span>${esc(i.label)}</span></div>`).join('')}</div>`; };
 
@@ -206,7 +212,7 @@ async function logout() { localStorage.removeItem('add_me'); try { await sb.auth
 /* Menu latéral groupé : chaque entrée est une page entière (4e valeur = réservé à l'administrateur) */
 const MENU = [
   ['Général', [['dashboard', 'Tableau de bord', 'home']]],
-  ['Membres', [['membres', 'Liste des membres', 'users'], ['import', 'Importer des membres', 'upload', 'resp'], ['anniversaires', 'Anniversaires', 'gift']]],
+  ['Membres', [['membres', 'Liste des membres', 'users'], ['import', 'Importer des membres', 'upload', 'admin'], ['anniversaires', 'Anniversaires', 'gift']]],
   ['Participation', [['presences', 'Cultes et cellules', 'check'], ['synthese', 'Synthèse par membre', 'list'], ['statistiques', 'Statistiques', 'chart'], ['cellules', 'Cellules', 'grid']]],
   ['Suivi pastoral', [['a-visiter', 'À visiter', 'bell'], ['visites', 'Visites', 'pin']]],
   ['Baptême', [['candidats-bapteme', 'Candidats', 'drop'], ['suivi-bapteme', 'Suivi et décisions', 'clock'], ['baptises', 'Personnes baptisées', 'award']]],
@@ -222,13 +228,29 @@ const SUBS = {
   'Anniversaires': 'Par mois ou par semaine', 'Événements et programmes': 'Calendrier et comptes rendus', 'Rapports et statistiques': 'Bilans mensuels et annuels', 'Paramètres': 'Votre compte et les règles de suivi', 'Utilisateurs': 'Comptes et droits d\'accès', 'Importer des membres': 'Reprendre une liste existante (fichier CSV Excel)'
 };
 
+/* Installation : bouton « Installer l'application » (Android, ordinateur) ou mode d'emploi (iPhone) */
+let _installEv = null;
+const _standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const _ios = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+function showInstall() { $$('[data-install]').forEach(el => { el.hidden = _standalone() || !(_installEv || _ios()); }); }
+async function doInstall() {
+  if (_installEv) { _installEv.prompt(); try { await _installEv.userChoice; } catch (e) {} _installEv = null; showInstall(); }
+  else if (_ios()) openModal("Installer l'application", `<ol style="line-height:2;padding-left:20px;margin:0">
+    <li>Dans Safari, touchez le bouton <b>Partager</b> (le carré avec une flèche vers le haut).</li>
+    <li>Faites défiler et touchez <b>Sur l'écran d'accueil</b>.</li><li>Touchez <b>Ajouter</b> : l'icône apparaît comme une vraie application.</li></ol>`);
+}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _installEv = e; showInstall(); });
+window.addEventListener('appinstalled', () => { _installEv = null; showInstall(); toast('Application installée.'); });
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register((location.pathname.includes('/pages/') ? '../' : '') + 'sw.js').catch(() => {}));
+
 function renderSide(page) {
   const u = ME || JSON.parse(localStorage.getItem('add_me') || 'null'), adm = u?.role === 'admin', resp = ['admin', 'responsable'].includes(u?.role);
   const y = $('#sidebar nav')?.scrollTop ?? +(sessionStorage.getItem('sideY') || 0);
   $('#sidebar').innerHTML = `<div class="brand"><img src="../img/logo-banniere.png" alt="Vases d'Honneur"><small>ADD · Suivi des membres</small></div>
     <nav>${MENU.map(([g, items]) => { const its = items.filter(i => !i[3] || (i[3] === 'admin' ? adm : resp)); return its.length ? `<div class="grp">${g}</div>` + its.map(([k, l, i]) => `<a href="${k}.html" class="${k === page ? 'on' : ''}">${ico(i)}<span>${l}</span></a>`).join('') : ''; }).join('')}</nav>
+    <div class="inst" data-install hidden><button class="btn" onclick="doInstall()">${ico('download')}Installer l'application</button></div>
     <div class="usr">${u ? `<span class="av sm">${esc(initials(u.nom || u.username))}</span><div><b>${esc(u.nom || u.username)}</b><small>${esc(ROLES[u.role] || '')}</small></div>` : '<div></div>'}<button onclick="logout()" title="Se déconnecter" aria-label="Se déconnecter">${ico('logout')}</button></div>`;
-  $('#sidebar nav').scrollTop = y;
+  $('#sidebar nav').scrollTop = y; showInstall();
 }
 const decorate = () => $$('[data-ico]').forEach(e => { if (!e.dataset.done) { e.insertAdjacentHTML('afterbegin', ico(e.dataset.ico)); e.dataset.done = 1; } });
 function countUp(root = document) {
@@ -239,7 +261,7 @@ function countUp(root = document) {
 /* Réseau : bandeau permanent + écran explicite quand une page ne peut pas se charger */
 function netBanner(off) {
   let b = $('#netbar'); if (!b) { b = document.createElement('div'); b.id = 'netbar'; document.body.appendChild(b); }
-  b.innerHTML = ico('wifioff') + 'Pas de connexion Internet : les données ne peuvent être ni chargées ni enregistrées.';
+  b.innerHTML = ico('wifioff') + 'Pas de connexion Internet<span class="nb-long"> : les données ne peuvent être ni chargées ni enregistrées.</span>';
   document.body.classList.toggle('offline', off);
 }
 function offlineScreen() {
@@ -259,6 +281,7 @@ async function boot(page, title, fn) {
   $('#topbar').innerHTML = `<button class="burger" onclick="document.body.classList.toggle('menu')" aria-label="Menu">${ico('menu', 22)}</button><div class="ttl"><h1>${title}</h1><p>${SUBS[title] || ''}</p></div><span class="date">${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>`;
   decorate();
   try {
+    if (!navigator.onLine) throw new TypeError('Failed to fetch');   // appareil hors réseau : message immédiat
     if (!await requireAuth()) return;
     localStorage.setItem('add_me', JSON.stringify({ nom: ME.nom, username: ME.username, role: ME.role }));
     renderSide(page);

@@ -2,7 +2,7 @@
 
 Application web (HTML / CSS / JavaScript + Supabase). Ouvrir `index.html` via un petit serveur local
 (extension « Live Server » de VS Code, ou `python -m http.server` dans ce dossier).
-Connexion Internet requise pour les données (base Supabase). La bibliothèque Supabase est embarquée dans `js/vendor/`.
+Connexion Internet requise pour les données (base Supabase). La bibliothèque Supabase (version 2.118.0) est embarquée dans `js/vendor/`.
 Sans réseau, l'application affiche un bandeau et un écran « Pas de connexion Internet » avec un bouton Réessayer,
 et se recharge toute seule au retour de la connexion.
 
@@ -28,3 +28,11 @@ et se recharge toute seule au retour de la connexion.
 - `js/<page>.js` : le code de chaque page · `css/style.css` : design · `sql/schema.sql` : base de données
 
 - `img/` : logo et photos de l'église
+
+## Installation comme application (ordinateur et téléphone)
+- Android / Chrome / Edge : le bouton « Installer l'application » apparaît dans le menu (et sur la page de connexion) quand le navigateur le permet.
+- iPhone (Safari) : le même bouton affiche le mode d'emploi (Partager > Sur l'écran d'accueil).
+- Mises à jour : à chaque changement de fichiers, augmenter le numéro de `VERSION` dans `sw.js` pour que les appareils rechargent la nouvelle version.
+
+## Droits
+- « Importer des membres » : réservé à l'administrateur. « Utilisateurs » : administrateur seulement.
