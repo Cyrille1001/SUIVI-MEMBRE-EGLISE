@@ -40,20 +40,64 @@ async function preparePhoto(file, maxSide = 1600) {
   if (file.type && !file.type.startsWith('image/')) throw new Error("Ce fichier n'est pas une image.");
   let blob = null;
   try {
-    const url = URL.createObjectURL(file);
+    let src = null, w = 0, h = 0, fin = () => {};
+    /* Grosse photo d'appareil (12 à 50 mégapixels) : décodée directement en taille réduite, pour ne pas saturer la mémoire du téléphone */
+    if (window.createImageBitmap && file.size > 1.2 * 1048576) {
+      try { const bm = await createImageBitmap(file, { resizeWidth: maxSide, resizeQuality: 'medium' }); src = bm; w = bm.width; h = bm.height; fin = () => bm.close(); } catch (e) { src = null; }
+    }
+    if (!src) {
+      const url = URL.createObjectURL(file);
+      fin = () => URL.revokeObjectURL(url);
+      try { src = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error('decode')); i.src = url; }); w = src.naturalWidth; h = src.naturalHeight; }
+      catch (e) { fin(); throw e; }
+    }
     try {
-      const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error('decode')); i.src = url; });
-      const k = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
-      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
-      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      const k = Math.min(1, maxSide / Math.max(w, h));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(src, 0, 0, c.width, c.height);
       for (const q of [.85, .7, .55, .4]) { blob = await new Promise(r => c.toBlob(r, 'image/jpeg', q)); if (blob && blob.size <= PHOTO_MAX) break; }
-    } finally { URL.revokeObjectURL(url); }
+      c.width = c.height = 0;                    // libère la mémoire du canevas tout de suite
+    } finally { fin(); }
   } catch (e) { blob = null; }
   if (!blob) blob = file;                       // décodage impossible : on garde l'original s'il est assez léger
   if (blob.size > PHOTO_MAX) throw new Error(blob === file
     ? "Impossible de réduire cette photo automatiquement. Reprenez-la ou choisissez-en une plus légère (5 Mo maximum)."
     : `La photo dépasse encore 5 Mo (${(blob.size / 1048576).toFixed(1)} Mo).`);
   return blob;
+}
+/* Appareil photo intégré à l'application : photo légère (1280 px) prise sans ouvrir l'application Photo du téléphone,
+   qui peut manquer de mémoire. Renvoie un Blob JPEG, null si annulé, undefined si la caméra intégrée n'est pas disponible. */
+function takePhoto() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) return resolve(undefined);
+    const o = document.createElement('div'); o.className = 'overlay cam'; o.id = 'camera';
+    o.innerHTML = `<div class="modal"><div class="mh"><h3>Prendre une photo</h3><button type="button" class="x" data-a="stop" aria-label="Fermer">${ico('x', 16)}</button></div>
+      <div class="mb"><video playsinline muted autoplay></video><div class="foot"><button type="button" class="btn ghost" data-a="flip">Changer de caméra</button><button type="button" class="btn" data-a="shot">${ico('camera')}Capturer</button></div></div></div>`;
+    const v = $('video', o); let stream = null, face = 'environment', fini = false;
+    const fermer = r => { if (fini) return; fini = true; stream?.getTracks().forEach(t => t.stop()); document.removeEventListener('keydown', esc_, true); o.remove(); resolve(r); };
+    const esc_ = e => { if (e.key === 'Escape') { e.stopPropagation(); fermer(null); } };    // Échap ferme la caméra, pas la fiche derrière
+    const start = async () => {
+      stream?.getTracks().forEach(t => t.stop());
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: face }, width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false });
+      if (fini) return stream.getTracks().forEach(t => t.stop());
+      v.srcObject = stream; try { await v.play(); } catch (e) {}
+    };
+    const echec = e => { if (fini) return; fini = true; stream?.getTracks().forEach(t => t.stop()); document.removeEventListener('keydown', esc_, true); o.remove();
+      reject(new Error(e?.name === 'NotAllowedError' ? "L'accès à la caméra est refusé. Autorisez-le dans les réglages du navigateur, ou utilisez « Galerie »." : "Caméra indisponible sur cet appareil. Utilisez « Galerie ».")); };
+    o.addEventListener('click', e => {
+      const a = e.target.closest('[data-a]')?.dataset.a;
+      if (a === 'stop') fermer(null);
+      else if (a === 'flip') { face = face === 'environment' ? 'user' : 'environment'; start().catch(echec); }
+      else if (a === 'shot') {
+        const w = v.videoWidth, h = v.videoHeight; if (!w) return;
+        const k = Math.min(1, 1280 / Math.max(w, h)), c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        c.toBlob(b => { c.width = c.height = 0; fermer(b); }, 'image/jpeg', .85);
+      }
+    });
+    document.addEventListener('keydown', esc_, true); document.body.appendChild(o);
+    start().catch(echec);
+  });
 }
 function downloadBlob(nom, blob) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nom; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1500);

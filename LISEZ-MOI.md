@@ -16,7 +16,7 @@ et se recharge toute seule au retour de la connexion.
    Ce premier compte devient administrateur ; connexion avec le nom `admin`.
 6. Les autres comptes se créent dans l'application : Administration > Utilisateurs.
 7. Pour reprendre une liste existante : Membres > Importer des membres (fichier CSV enregistré depuis Excel).
-8. Photos : le bouton « Prendre une photo » ouvre directement la caméra du téléphone (5 Mo maximum, photo réduite automatiquement avant envoi).
+8. Photos : le bouton « Prendre une photo » ouvre la caméra intégrée à l'application (photo légère, sans quitter la page ; il faut autoriser l'accès à la caméra et utiliser https). Si elle n'est pas disponible, l'appareil photo du téléphone s'ouvre à la place. « Galerie » accepte toute photo (5 Mo maximum, réduite automatiquement avant envoi).
 9. Paramètres > Sauvegarde : télécharge toutes les données dans un fichier (à faire régulièrement).
 
 ## Structure

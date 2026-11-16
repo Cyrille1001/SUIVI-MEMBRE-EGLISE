@@ -70,14 +70,24 @@ function edit(id) {
     </div>
     <div class="foot"><span></span><button class="btn" id="save">Enregistrer</button></div>`, { wide: true });
   fillForm(b, m);
+  let purl = null;
+  const setPhoto = blob => {
+    PHOTO = blob; if (purl) URL.revokeObjectURL(purl); purl = URL.createObjectURL(PHOTO);
+    $('#pprev', b).outerHTML = `<img id="pprev" class="av" style="width:76px;height:76px" src="${purl}" alt="">`;
+    $('#pinfo', b).textContent = `Photo prête (${(PHOTO.size / 1048576).toFixed(1)} Mo). Pensez à enregistrer la fiche.`;
+  };
   const pick = inp => inp.onchange = () => run(async () => {
     const f = inp.files[0]; if (!f) return;
-    const nouvelle = await preparePhoto(f); inp.value = ''; PHOTO = nouvelle;
-    $('#pprev', b).outerHTML = `<img id="pprev" class="av" style="width:76px;height:76px" src="${URL.createObjectURL(PHOTO)}" alt="">`;
-    $('#pinfo', b).textContent = `Photo prête (${(PHOTO.size / 1048576).toFixed(1)} Mo). Pensez à enregistrer la fiche.`;
+    const nouvelle = await preparePhoto(f); inp.value = ''; setPhoto(nouvelle);
   });
   pick($('#photo', b)); pick($('#photoG', b));
-  $('#pcam', b).onclick = () => $('#photo', b).click(); $('#pgal', b).onclick = () => $('#photoG', b).click();
+  /* « Prendre une photo » : caméra intégrée (légère) ; si elle n'est pas disponible, appareil photo du téléphone */
+  $('#pcam', b).onclick = () => run(async () => {
+    const blob = await takePhoto();
+    if (blob === undefined) return $('#photo', b).click();
+    if (blob) setPhoto(blob);
+  });
+  $('#pgal', b).onclick = () => $('#photoG', b).click();
   const tog = () => $('#dbp', b).style.display = $('#bp', b).checked ? '' : 'none'; tog(); $('#bp', b).onchange = tog;
   $('#save', b).onclick = () => run(() => save(m, b));
 }
