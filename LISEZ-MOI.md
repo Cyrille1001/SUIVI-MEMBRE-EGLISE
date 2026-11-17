@@ -31,7 +31,7 @@ et se recharge toute seule au retour de la connexion.
 - `img/` : logo et photos de l'église
 
 ## Installation comme application (ordinateur et téléphone)
-- Android / Chrome / Edge : le bouton « Installer l'application » apparaît dans le menu (et sur la page de connexion) quand le navigateur le permet.
+- Android / Chrome / Edge : le bouton « Installer l'application » apparaît sur la page de connexion quand le navigateur le permet.
 - iPhone (Safari) : le même bouton affiche le mode d'emploi (Partager > Sur l'écran d'accueil).
 - Mises à jour : à chaque changement de fichiers, augmenter le numéro de `VERSION` dans `sw.js` pour que les appareils rechargent la nouvelle version.
 

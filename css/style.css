@@ -29,7 +29,6 @@ a{color:var(--pri2);text-decoration:none;transition:color .2s}a:hover{color:var(
 .side nav a:hover{background:#ffffff14;color:#fff;transform:translateX(4px)}
 .side nav a.on{background:#ffffff22;color:#fff;font-weight:600}
 .side nav a.on{box-shadow:inset 0 0 0 1px #ffffff1f}.side nav a.on::before{content:"";position:absolute;left:-14px;top:11px;bottom:11px;width:5px;border-radius:0 5px 5px 0;background:var(--gold);animation:fade .4s}
-.inst{padding:0 14px 10px;position:relative}.inst .btn{width:100%;background:var(--gold);color:#3a2f00}.inst .btn:hover{background:#e0bf2c;color:#3a2f00;box-shadow:0 8px 20px #0004}
 .usr{padding:12px 14px;margin:0 12px 12px;border-radius:20px;box-shadow:inset 0 0 0 1px #ffffff14;background:#ffffff14;display:flex;align-items:center;gap:10px;position:relative}
 .usr>div{flex:1;min-width:0}.usr b{display:block;color:#fff;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.usr small{color:#9fd0cc}
 .usr button{background:#ffffff1f;color:#fff;border:0;border-radius:10px;width:36px;height:36px;cursor:pointer;display:grid;place-items:center;transition:background .2s}.usr button:hover{background:var(--bad)}

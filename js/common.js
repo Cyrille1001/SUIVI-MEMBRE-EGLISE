@@ -314,7 +314,6 @@ function renderSide(page) {
   const y = $('#sidebar nav')?.scrollTop ?? +(sessionStorage.getItem('sideY') || 0);
   $('#sidebar').innerHTML = `<div class="brand"><img src="../img/logo-banniere.png" alt="Vases d'Honneur"><small>ADD · Suivi des membres</small></div>
     <nav>${MENU.map(([g, items]) => { const its = items.filter(i => !i[3] || (i[3] === 'admin' ? adm : resp)); return its.length ? `<div class="grp">${g}</div>` + its.map(([k, l, i]) => `<a href="${k}.html" class="${k === page ? 'on' : ''}">${ico(i)}<span>${l}</span></a>`).join('') : ''; }).join('')}</nav>
-    <div class="inst" data-install hidden><button class="btn" onclick="doInstall()">${ico('download')}Installer l'application</button></div>
     <div class="usr">${u ? `<span class="av sm">${esc(initials(u.nom || u.username))}</span><div><b>${esc(u.nom || u.username)}</b><small>${esc(ROLES[u.role] || '')}</small></div>` : '<div></div>'}<button onclick="logout()" title="Se déconnecter" aria-label="Se déconnecter">${ico('logout')}</button></div>`;
   $('#sidebar nav').scrollTop = y; showInstall();
 }
