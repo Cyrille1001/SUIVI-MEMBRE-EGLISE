@@ -31,6 +31,7 @@ function sauvegarde() {
     const out = { application: 'ADD Âmes de Dieu', date: new Date().toISOString(), tables: {} };
     for (const t of ['membres', 'cellules', 'reunions', 'presences', 'visites', 'baptemes', 'evenements', 'historique', 'parametres'])
       out.tables[t] = await fetchAll(() => sb.from(t).select('*').order(t === 'parametres' ? 'cle' : 'id'));
+    const cai = await loadCaisse(); if (cai) out.tables.caisse = cai;        // la caisse fait partie de la sauvegarde (null si non installée)
     downloadBlob(`sauvegarde-add-${today()}.json`, new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }));
     toast('Sauvegarde téléchargée.');
   });
