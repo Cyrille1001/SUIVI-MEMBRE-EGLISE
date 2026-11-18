@@ -287,7 +287,7 @@ const MENU = [
 ];
 const ROLES = { admin: 'Administrateur', responsable: 'Responsable', serviteur: 'Serviteur' };
 const SUBS = {
-  'Tableau de bord': "Vue d'ensemble de la vie de l'église", 'Membres': 'Tous les membres, du premier contact à l\'intégration', 'Fiche membre': 'Toutes les informations du membre au même endroit',
+  'Tableau de bord': "Vue d'ensemble de la vie des membres de la cellule de Belle Ville", 'Membres': 'Tous les membres, du premier contact à l\'intégration', 'Fiche membre': 'Toutes les informations du membre au même endroit',
   'Cultes et cellules': 'Créez un culte ou une cellule, pointez les présences, cliquez sur une date pour le détail', 'Synthèse par membre': 'Présences et absences de chacun, cultes et cellules séparés', 'Statistiques de participation': 'Effectifs et taux de présence',
   'Cellules': 'Les groupes de maison et leurs responsables', 'Visites': 'Historique des visites effectuées', 'Membres à visiter': 'Membres absents à visiter et visites planifiées',
   'Candidats au baptême': 'Membres réguliers prêts à être proposés', 'Suivi des baptêmes': 'Décisions après validation pastorale', 'Personnes baptisées': 'Registre des baptêmes',
@@ -312,7 +312,7 @@ if ('serviceWorker' in navigator) window.addEventListener('load', () => navigato
 function renderSide(page) {
   const u = ME || JSON.parse(localStorage.getItem('add_me') || 'null'), adm = u?.role === 'admin', resp = ['admin', 'responsable'].includes(u?.role);
   const y = $('#sidebar nav')?.scrollTop ?? +(sessionStorage.getItem('sideY') || 0);
-  $('#sidebar').innerHTML = `<div class="brand"><img src="../img/logo-banniere.png" alt="Vases d'Honneur"><small>ADD · Suivi des membres</small></div>
+  $('#sidebar').innerHTML = `<div class="brand"><img src="../img/logo-banniere.png" alt="Vases d'Honneur"><small>Suivi des membres de cellule de Belle Ville</small></div>
     <nav>${MENU.map(([g, items]) => { const its = items.filter(i => !i[3] || (i[3] === 'admin' ? adm : resp)); return its.length ? `<div class="grp">${g}</div>` + its.map(([k, l, i]) => `<a href="${k}.html" class="${k === page ? 'on' : ''}">${ico(i)}<span>${l}</span></a>`).join('') : ''; }).join('')}</nav>
     <div class="usr">${u ? `<span class="av sm">${esc(initials(u.nom || u.username))}</span><div><b>${esc(u.nom || u.username)}</b><small>${esc(ROLES[u.role] || '')}</small></div>` : '<div></div>'}<button onclick="logout()" title="Se déconnecter" aria-label="Se déconnecter">${ico('logout')}</button></div>`;
   $('#sidebar nav').scrollTop = y; showInstall();
